@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[ObservedBy(LoanObserver::class)]
 class Loan extends Model
@@ -40,6 +41,11 @@ class Loan extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function fine(): HasOne
+    {
+        return $this->hasOne(Fine::class, 'loan_id');
     }
 
     public function loanItems(): HasMany

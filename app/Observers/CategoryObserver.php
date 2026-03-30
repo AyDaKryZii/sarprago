@@ -2,6 +2,8 @@
 
 namespace App\Observers;
 
+use App\Events\ActivityLogged;
+use App\Helpers\LogHelper;
 use App\Models\Category;
 use Illuminate\Support\Str;
 
@@ -22,7 +24,11 @@ class CategoryObserver
      */
     public function created(Category $category): void
     {
-        //
+        event(new ActivityLogged(
+            $category,
+            "Added new category: {$category->name} (ID: {$category->id})",
+            'Inventory',
+        ));
     }
 
     /**
@@ -30,7 +36,16 @@ class CategoryObserver
      */
     public function updated(Category $category): void
     {
-        //
+        $properties = LogHelper::format($category, ['slug']);
+
+        if ($category->wasChanged('name')){
+            event(new ActivityLogged(
+                $category,
+                "Updated category from: {$category->name} (ID: {$category->id}) to: {$category->name} (ID: {$category->id})",
+                'Inventory',
+                $properties
+            ));
+        }
     }
 
     /**
@@ -38,7 +53,11 @@ class CategoryObserver
      */
     public function deleted(Category $category): void
     {
-        //
+        event(new ActivityLogged(
+            $category,
+            "Deleted category: {$category->name} (ID: {$category->id})",
+            'Inventory',
+        ));
     }
 
     /**

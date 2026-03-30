@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Items\RelationManagers;
 
+use App\Events\ActivityLogged;
 use App\Filament\Admin\Resources\ItemUnits\ItemUnitResource;
 use App\Models\ItemUnit;
 use Filament\Actions\Action;
@@ -44,12 +45,31 @@ class UnitsRelationManager extends RelationManager
                     ])
                 ->action(function (array $data, $livewire) {
                     $item = $livewire->getOwnerRecord();
+                    $qty = $data['qty'];
 
                     for ($i = 1; $i <= $data['qty']; $i++) {
                         $item->units()->create([
                             'attributes' => $data['attributes']
                         ]);
                     }
+
+                    $properties = [
+                        'Total Quantity' => "{$qty} units added",
+                    ];
+
+                    if (!empty($data['attributes'])) {
+                        foreach ($data['attributes'] as $key => $value) {
+                            $properties["Attr: {$key}"] = $value;
+                        }
+                    }
+                    $spell = str('unit')->plural($qty);
+
+                    event(new ActivityLogged(
+                        subject: $item, 
+                        description: "Added {$qty} new {$spell} to item: {$item->name}",
+                        logName: 'Inventory',
+                        properties: $properties
+                    ));
                 }),
             ]);
     }

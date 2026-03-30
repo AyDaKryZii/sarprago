@@ -1,37 +1,34 @@
 <?php
 
-namespace App\Filament\Admin\Resources\Items\Tables;
+namespace App\Filament\Admin\Resources\Fines\Tables;
 
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class ItemsTable
+class FinesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('category.name')
+                TextColumn::make('loan.id')
                     ->searchable(),
-                TextColumn::make('name')
+                TextColumn::make('user.name')
                     ->searchable(),
-                TextColumn::make('brand')
+                TextColumn::make('amount')
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('reason')
                     ->searchable(),
-                TextColumn::make('code_prefix')
-                    ->searchable(),
-                TextColumn::make('units_count')
-                    ->label('Total Units')
-                    ->counts('units'),
-                TextColumn::make('deleted_at')
+                TextColumn::make('status')
+                    ->badge(),
+                TextColumn::make('paid_at')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -47,7 +44,6 @@ class ItemsTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

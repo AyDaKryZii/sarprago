@@ -26,7 +26,8 @@ class UserInfolist
                     ->boolean(),
                 ImageEntry::make('profile_photo_path')
                     ->circular()
-                    ->defaultImageUrl(fn ($record) => $record->getFilamentAvatarUrl()),
+                    ->defaultImageUrl('/images/no-image.png')
+                    ->placeholder('No Image'),
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (User $record): bool => $record->trashed()),

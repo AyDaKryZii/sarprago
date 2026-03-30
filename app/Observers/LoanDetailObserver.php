@@ -26,21 +26,6 @@ class LoanDetailObserver
         $detail->itemUnit()->update([
             'status' => 'available',
         ]);
-
-        $loan = $detail->loanItem->loan;
-
-        $anyStillBorrowed = $loan->loanItems()
-            ->whereHas('loanDetails', fn ($q) =>
-                $q->whereNull('returned_at')
-            )
-            ->exists();
-
-        if (!$anyStillBorrowed) {
-            $loan->update([
-                'status' => 'returned',
-                'returned_at' => now(),
-            ]);
-        }
     }
 
     /**

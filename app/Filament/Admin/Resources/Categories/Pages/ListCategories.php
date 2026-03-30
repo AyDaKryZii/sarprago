@@ -3,9 +3,7 @@
 namespace App\Filament\Admin\Resources\Categories\Pages;
 
 use App\Filament\Admin\Resources\Categories\CategoryResource;
-use App\Filament\Imports\CategoryImporter;
 use Filament\Actions\CreateAction;
-use Filament\Actions\ImportAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListCategories extends ListRecords
@@ -16,7 +14,6 @@ class ListCategories extends ListRecords
     {
         return [
             CreateAction::make(),
-            ImportAction::make()->importer(CategoryImporter::class)
         ];
     }
 }

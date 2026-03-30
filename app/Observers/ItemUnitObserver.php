@@ -2,6 +2,8 @@
 
 namespace App\Observers;
 
+use App\Events\ActivityLogged;
+use App\Helpers\LogHelper;
 use App\Models\ItemUnit;
 use Illuminate\Support\Facades\DB;
 
@@ -41,7 +43,18 @@ class ItemUnitObserver
      */
     public function updated(ItemUnit $itemUnit): void
     {
-        //
+        $properties = LogHelper::format($itemUnit, ['slug']);
+
+        if (empty($properties)) {
+            return;
+        }
+
+        event(new ActivityLogged(
+            $itemUnit,
+            "Updated unit {$itemUnit->item->name} {$itemUnit->unit_code} (ID: {$itemUnit->id})",
+            'Inventory',
+            $properties
+        ));
     }
 
     /**
@@ -49,7 +62,11 @@ class ItemUnitObserver
      */
     public function deleted(ItemUnit $itemUnit): void
     {
-        //
+        event(new ActivityLogged(
+            $itemUnit,
+            "Deleted unit: {$itemUnit->item->name} {$itemUnit->unit_code} (ID: {$itemUnit->id})",
+            'Inventory',
+        ));
     }
 
     /**

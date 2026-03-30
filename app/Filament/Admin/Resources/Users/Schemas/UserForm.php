@@ -7,6 +7,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Resources\Pages\Page;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -24,7 +25,10 @@ class UserForm
                     ->unique(),
                 TextInput::make('password')
                     ->password()
-                    ->required(),
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->required(fn (Page $livewire) => $livewire instanceof CreateUser)
+                    ->placeholder(fn (Page $livewire) => ($livewire instanceof CreateUser) ? '' : '********')
+                    ->revealable(),
                 Select::make('role')
                     ->options(['admin' => 'Admin', 'staff' => 'Staff', 'user' => 'User'])
                     ->default('user')
