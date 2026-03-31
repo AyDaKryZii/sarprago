@@ -2,6 +2,8 @@
 
 namespace App\Filament\App\Resources\MyLoans\Tables;
 
+use App\Events\ActivityLogged;
+use App\Helpers\LogHelper;
 use App\Models\Loan;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
@@ -11,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class MyLoansTable
 {
@@ -66,93 +69,89 @@ class MyLoansTable
             ->recordActions([
                 ViewAction::make(),
                 self::cancelLoan(),
-Action::make('respondPartial')
-    ->label('Respon Keputusan')
-    ->icon('heroicon-m-chat-bubble-left-right')
-    ->color('warning')
-    ->modalHeading('Keputusan Persetujuan Sebagian')
-    ->modalDescription('Admin hanya menyetujui sebagian barang. Silakan pilih untuk menerima jumlah tersebut atau batalkan semua.')
-    ->visible(fn (Loan $record) => $record->status === 'partially_approved')
-    ->fillForm(fn (Loan $record) => [
-        'items' => $record->loanItems->map(fn ($item) => [
-            'name' => $item->item->name,
-            'qty_request' => $item->qty_request,
-            'qty_approved' => $item->qty_approved,
-        ])->toArray(),
-    ])
-    ->form([
-        Repeater::make('items')
-            ->label('Perbandingan Barang')
-            ->schema([
-                TextInput::make('name')->label('Barang')->disabled(),
-                TextInput::make('qty_request')->label('Diminta')->disabled(),
-                TextInput::make('qty_approved')->label('Disetujui Admin')->disabled()
-                    ->extraAttributes(['class' => 'font-bold text-primary-600']),
-            ])
-            ->addable(false)
-            ->deletable(false)
-            ->columns(3),
-    ])
-    // Kita hilangkan tombol submit bawaan
-    ->modalSubmitAction(false) 
-    ->modalCancelAction(false)
-    // Kita buat dua tombol kustom di footer modal
-    ->extraModalActions([
-// TOMBOL TERIMA
-        Action::make('acceptAction')
-            ->label('Terima & Lanjut')
-            ->color('success')
-            ->requiresConfirmation()
-            ->action(function (Loan $record) {
-                \DB::transaction(function () use ($record) {
-                    foreach ($record->loanItems as $item) {
-                        // Cek jika ada selisih antara yang di-reserve (qty_request) 
-                        // dengan yang disetujui admin (qty_approved)
-                        $diff = $item->qty_request - $item->qty_approved;
+                Action::make('respondPartial')
+                    ->label('Respon Keputusan')
+                    ->icon('heroicon-m-chat-bubble-left-right')
+                    ->color('warning')
+                    ->modalHeading('Respond Partial Approval')
+                    ->modalDescription('Admin did not approve all items.')
+                    ->visible(fn (Loan $record) => $record->status === 'partially_approved')
+                    ->fillForm(fn (Loan $record) => [
+                        'items' => $record->loanItems->map(fn ($item) => [
+                            'name' => $item->item->name,
+                            'qty_request' => $item->qty_request,
+                            'qty_approved' => $item->qty_approved,
+                        ])->toArray(),
+                    ])
+                    ->form([
+                        Repeater::make('items')
+                            ->label('Quantity Comparison')
+                            ->schema([
+                                TextInput::make('name')->label('Item')->disabled(),
+                                TextInput::make('qty_request')->label('Qty Request')->disabled(),
+                                TextInput::make('qty_approved')->label('Qty Approved')->disabled()
+                                    ->extraAttributes(['class' => 'font-bold text-primary-600']),
+                            ])
+                            ->addable(false)
+                            ->deletable(false)
+                            ->columns(3),
+                    ])
+                    ->modalSubmitAction(false) 
+                    ->modalCancelAction(false)
+                    ->extraModalFooterActions([
+                        Action::make('acceptAction')
+                            ->label('Accept')
+                            ->color('success')
+                            ->requiresConfirmation()
+                            ->action(function (Loan $record) {
+                                DB::transaction(function () use ($record) {
+                                    foreach ($record->loanItems as $item) {
+                                        $diff = $item->qty_request - $item->qty_approved;
 
-                        if ($diff > 0) {
-                            // Ambil kelebihan unit yang statusnya masih reserved
-                            $detailsToRelease = $item->loanDetails()
-                                ->limit($diff)
-                                ->get();
+                                        if ($diff > 0) {
+                                            $detailsToRelease = $item->loanDetails()
+                                                ->limit($diff)
+                                                ->get();
 
-                            foreach ($detailsToRelease as $detail) {
-                                // Kembalikan ke gudang (Available)
-                                $detail->itemUnit->update(['status' => 'available']);
-                                // Hapus detail transaksinya
-                                $detail->delete();
-                            }
-                        }
-                    }
+                                            foreach ($detailsToRelease as $detail) {
+                                                $detail->itemUnit->update(['status' => 'available']);
+                                                $detail->delete();
+                                            }
+                                        }
+                                    }
 
-                    // Update status utama menjadi approved (siap diambil)
-                    $record->update(['status' => 'approved']);
-                });
+                                    $record->update(['status' => 'approved']);
+                                });
 
-                Notification::make()->title('Keputusan Diterima')->success()->send();
-            }),
+                                Notification::make()->title('Loan Approved')->success()->send();
+                            }),
 
-        // TOMBOL BATALKAN
-        Action::make('cancelAction')
-            ->label('Batalkan Semua')
-            ->color('danger')
-            ->requiresConfirmation()
-            ->action(function (Loan $record) {
-                \DB::transaction(function () use ($record) {
-                    foreach ($record->loanItems as $item) {
-                        // Lepaskan SEMUA unit yang sudah di-reserve
-                        $item->loanDetails->each(function ($detail) {
-                            $detail->itemUnit->update(['status' => 'available']);
-                        });
-                        $item->loanDetails()->delete();
-                    }
-                    $record->update(['status' => 'cancelled']);
-                });
-                Notification::make()->title('Peminjaman Dibatalkan')->danger()->send();
-            }),
-            
-        Action::make('close')->label('Nanti Saja')->color('gray')->close(),
-    ])
+                        Action::make('cancelAction')
+                            ->label('Cancelled All')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->action(function (Loan $record) {
+                                DB::transaction(function () use ($record) {
+                                    foreach ($record->loanItems as $item) {
+                                        $item->loanDetails->each(function ($detail) {
+                                            $detail->itemUnit->update(['status' => 'available']);
+                                        });
+                                        $item->loanDetails()->delete();
+                                    }
+                                    $record->update(['status' => 'cancelled']);
+                                });
+                                Notification::make()->title('Loan Cancelled')->danger()->send();
+                            })
+                            ->after(fn (Loan $record) =>
+                                event(new ActivityLogged(
+                                    $record,
+                                    "Cancelled {$record->loan_code}",
+                                    'Transaction',
+                                    LogHelper::format($record, ['admin_note']),
+                            ))),
+                            
+                        Action::make('close')->label('Later')->color('gray')->close(),
+                    ])
             ])
             ->toolbarActions([
                 //
@@ -169,7 +168,7 @@ Action::make('respondPartial')
                     ->modalHeading('Cancel this request?')
                     ->visible(fn (Loan $record) => $record->status === 'pending')
                     ->action(function (Loan $record) {
-                        \DB::transaction(function () use ($record) {
+                        DB::transaction(function () use ($record) {
                             foreach ($record->loanItems as $item) {
                                 foreach ($item->loanDetails as $detail) {
                                     $detail->itemUnit->update(['status' => 'available']);
@@ -185,6 +184,13 @@ Action::make('respondPartial')
                             ->title('Request Cancelled!')
                             ->success()
                             ->send();
-                    });
+                    })
+                    ->after(fn (Loan $record) =>
+                        event(new ActivityLogged(
+                            $record,
+                            "Cancelled {$record->loan_code}",
+                            'Transaction',
+                            LogHelper::format($record, ['admin_note']),
+                    )));
     }
 }

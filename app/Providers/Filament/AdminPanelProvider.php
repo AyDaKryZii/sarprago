@@ -32,7 +32,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationItem::make('User Dashboard')
                     ->url('/app', shouldOpenInNewTab: false)
                     ->icon(Heroicon::ArrowLeftOnRectangle)
-                    ->sort(99)
+                    ->sort(100)
             ])
             ->colors([
                 'primary' => Color::Amber,

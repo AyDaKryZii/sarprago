@@ -19,10 +19,10 @@ return new class extends Migration
             
             $table->dateTime('borrowed_at')->nullable();
             $table->dateTime('due_at'); 
-            $table->dateTime('returned_at')->nullable();
+            $table->dateTime('finished_at')->nullable();
             
             $table->enum('status', [
-                'pending', 'approved', 'partially_approved', 'on_going', 'rejected', 'returned', 'cancelled'
+                'pending', 'approved', 'partially_approved', 'on_going', 'rejected', 'finished', 'cancelled'
             ])->default('pending');
             
             $table->text('reason')->nullable(); 
@@ -48,7 +48,7 @@ return new class extends Migration
             $table->foreignId('item_unit_id')->constrained('item_units')->cascadeOnDelete();
             
             $table->enum('condition_out', ['good', 'damaged'])->default('good');
-            $table->enum('condition_in', ['good', 'damaged', 'broken'])->nullable(); 
+            $table->enum('condition_in', ['good', 'damaged', 'broken', 'lost'])->nullable(); 
             
             $table->dateTime('returned_at')->nullable(); 
             

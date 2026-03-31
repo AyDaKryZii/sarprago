@@ -9,8 +9,10 @@ use App\Filament\Admin\Resources\ActivityLogs\Pages\ViewActivityLog;
 use App\Filament\Admin\Resources\ActivityLogs\Schemas\ActivityLogForm;
 use App\Filament\Admin\Resources\ActivityLogs\Schemas\ActivityLogInfolist;
 use App\Filament\Admin\Resources\ActivityLogs\Tables\ActivityLogsTable;
+use App\HasRolePermission;
 use App\Models\ActivityLog;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -18,9 +20,15 @@ use Filament\Tables\Table;
 
 class ActivityLogResource extends Resource
 {
+    use HasRolePermission;
+
+    protected static array $allowedroles = ['admin'];
+
     protected static ?string $model = ActivityLog::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::FingerPrint;
+
+    protected static ?int $navigationSort = 99;
 
     protected static ?string $recordTitleAttribute = 'log_name';
 

@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\Fines\Pages\ViewFine;
 use App\Filament\Admin\Resources\Fines\Schemas\FineForm;
 use App\Filament\Admin\Resources\Fines\Schemas\FineInfolist;
 use App\Filament\Admin\Resources\Fines\Tables\FinesTable;
+use App\HasRolePermission;
 use App\Models\Fine;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,9 +19,15 @@ use Filament\Tables\Table;
 
 class FineResource extends Resource
 {
+    use HasRolePermission;
+
+    protected static array $allowedroles = ['admin', 'staff'];
+
     protected static ?string $model = Fine::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::Banknotes;
+
+    protected static ?int $navigationSort = 5;
 
     public static function form(Schema $schema): Schema
     {

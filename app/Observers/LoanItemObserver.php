@@ -11,7 +11,7 @@ class LoanItemObserver
     /**
      * Handle the LoanItem "created" event.
      */
-        public function created(LoanItem $loanItem): void
+    public function created(LoanItem $loanItem): void
     {
         DB::transaction(function () use ($loanItem) {
 
@@ -25,17 +25,18 @@ class LoanItemObserver
                 throw new \Exception('Unit not enough');
             }
 
-            foreach ($units as $unit) {
+            ItemUnit::withoutEvents(function () use ($units, $loanItem) {
+                foreach ($units as $unit) {
+                    $loanItem->loanDetails()->create([
+                        'item_unit_id' => $unit->id,
+                        'condition_out' => $unit->condition
+                    ]);
 
-                $loanItem->loanDetails()->create([
-                    'item_unit_id' => $unit->id,
-                    'condition_out' => $unit->condition
-                ]);
-
-                $unit->update([
-                    'status' => 'reserved',
-                ]);
-            }
+                    $unit->update([
+                        'status' => 'reserved',
+                    ]);
+                }  
+            });
         });
     }
 

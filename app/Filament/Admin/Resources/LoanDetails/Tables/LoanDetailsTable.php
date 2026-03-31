@@ -43,20 +43,19 @@ class LoanDetailsTable
                 //
             ])
             ->recordActions([
-                // Action Utama: Terima Unit
                 Action::make('receiveUnit')
                     ->label('Receive')
                     ->icon('heroicon-m-check-circle')
                     ->color('success')
-                    // Hanya muncul jika barang sedang dipinjam
                     ->visible(fn (LoanDetail $record) => $record->returned_at === null)
                     ->form([
                         Select::make('condition_in')
-                            ->label('Kondisi Barang Kembali')
+                            ->label('Item Condition')
                             ->options([
-                                'good' => 'Good (Normal)',
-                                'damaged' => 'Damaged (Rusak)',
-                                'lost' => 'Lost (Hilang)',
+                                'good' => 'Good',
+                                'damaged' => 'Damaged',
+                                'broken' => 'Broken',
+                                'lost' => 'Lost',
                             ])
                             ->default('good')
                             ->required()
@@ -64,21 +63,15 @@ class LoanDetailsTable
                     ])
                     ->action(function (LoanDetail $record, array $data) {
                         DB::transaction(function () use ($record, $data) {
-                            // 1. Update data pengembalian di detail
                             $record->update([
                                 'condition_in' => $data['condition_in'],
                                 'returned_at' => now(),
                             ]);
 
-                            // 2. Update status unit fisik kembali ke available
-                            // Jika kondisi 'lost', mungkin kamu mau set status unitnya 'missing'
-                            // Tapi untuk sekarang kita set 'available' dulu agar bisa dipinjam lagi
-                            $newStatus = $data['condition_in'] === 'lost' ? 'unavailable' : 'available';
+                            $newCondition = $data['condition_in'];
                             
                             $record->itemUnit->update([
-                                'status' => $newStatus,
-                                // Opsi: Update kondisi master unit juga
-                                // 'condition' => $data['condition_in'], 
+                                'condition' => $newCondition,
                             ]);
                         });
                     }),

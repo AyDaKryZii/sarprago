@@ -4,40 +4,65 @@ Dokumen ini menyajikan metode pengembangan, struktur data, diagram, serta dokume
 
 ---
 
-## 1) Metode Pengembangan: Waterfall (Prototype)
+## A) Deskripsi Program
 
-### a. Analisis Kebutuhan
+### 1. Tujuan Sistem
+* Mengotomatisasi prosedur peminjaman sarana dan prasarana agar lebih terstruktur.
+* Menyediakan data stok unit barang yang akurat dan real-time.
+* Meminimalisir risiko kehilangan atau kerusakan aset melalui sistem pelacakan unit.
+* Mempercepat proses persetujuan dan serah terima barang antara petugas dan siswa.
+* Menciptakan transparansi riwayat peminjaman dan pengelolaan denda.
+* Menghasilkan audit trail yang lengkap melalui pencatatan log aktivitas sistem.
 
-#### Tujuan Sistem
-- Digitalisasi pengelolaan inventaris sarana dan prasarana.
-- Automasi alur peminjaman dari pengajuan hingga pengembalian.
-- Membuat laporan dalam format pdf.
+### 2. Aktor dan Hak Akses
+* **Administrator:** 
+    * Login dan Logout
+    * CRUD Modul User
+    * CRUD Modul Category
+    * CRUD Modul Item dan ItemUnit
+    * CRUD Modul Loan, LoanItem, dan LoanDetail
+    * CRUD Modul Fine
+    * View Modul ActivityLog
+    * Mencetak laporan untuk Loan
+    * Akses ke panel user
+    * Akses ke panel admin
 
-#### Aktor & Hak Akses
-- **User**
-    - Login dan logout
-    - Melihat daftar alat
-    - Mengajukan peminjaman
-- **Staff**
-    - Login dan logout
-    - Menyetujui peminjaman 
-    - Mengkonfirmasi pengembalian
-    - Mencetak laporan
-- **Admin**
-    - Login dan logout
-    - CRUD user
-    - CRUD alat
-    - CRUD kategori
-    - Melihat log aktifitas
-    - Menyetujui peminjaman 
-    - Mengkonfirmasi pengembalian
-    - Mencetak laporan
+* **Staff/Operator:** 
+    * Login dan Logout
+    * Akses terbatas ke Modul Loan, LoanItem, dan LoanDetail
+    * Akses terbatas ke Modul Fine
+    * Mencetak laporan untuk Loan
+    * Akses ke panel user
+    * Akses terbatas ke panel admin
+* **User/Siswa:** 
+    * Login dan Logout
+    * Akses ke panel user
+    * Mengajukan Loan
+
+### 3. Kebutuhan Fungsional (ringkas)
+* Sistem harus dapat melakukan CRUD data Category, Item, ItemUnit, dll.
+* Sistem harus menyediakan form pengajuan Loan dengan validasi stok otomatis.
+* Sistem harus mendukung fitur approval (approve/reject) oleh pihak Admin dan Staff.
+* Sistem harus memiliki fitur hand-over (serah terima) unit secara manual atau otomatis.
+* Sistem harus memiliki fitur untuk membuat denda (manual)
+* Sistem harus menyimpan log setiap perubahan data penting ke tabel ActivityLog.
+* Sistem harus mampu mencetak laporan atau ringkasan transaksi peminjaman.
+* Sistem harus memvalidasi status unit menjadi 'borrowed' saat sedang dipinjam.
+* Dan lainnya.
+
+### 4. Kebutuhan Non-Fungsional (ringkas)
+* **Security:** Enkripsi password menggunakan algoritma Bcrypt bawaan Laravel.
+* **Integrity:** Penggunaan Database Transaction untuk menjamin konsistensi data transaksi.
+* **Performance:** Penggunaan cache dan eager-load untuk menghindari N+1.
+* **Reliability:** Sistem harus tetap berjalan stabil meskipun menangani banyak data log.
+* **Availability:** Aplikasi berbasis web sehingga dapat diakses kapan saja melalui browser.
+* **Usability:** Antarmuka responsif menggunakan Filament PHP agar mudah diakses lewat HP.
 
 ---
 
-## 2) Struktur Data & Tipe Data
+## B) Schema dan ERD
 
-### 2.1 Struktur Data (Database Schema)
+### 1. Struktur Data (Database Schema)
 
 #### Tabel: `users` (Model: `User`)
 | Field | Tipe | Aturan/Pembatasan | Keterangan |
@@ -130,9 +155,7 @@ Dokumen ini menyajikan metode pengembangan, struktur data, diagram, serta dokume
 
 ---
 
-## 3) Diagram Sistem
-
-### 3.1 ERD (Entity Relationship Diagram)
+### 2. ERD (Entity Relationship Diagram)
 
 ```mermaid
 erDiagram
@@ -223,3 +246,44 @@ erDiagram
         bigint subject_id
         json properties
     }
+```
+
+---
+
+## C) Dokumentasi Fungsi dan Proses (Simplified)
+
+Bagian ini merangkum logika utama yang menjalankan fitur-fitur kritikal pada sistem **SarpraGo**.
+
+### 1. Fungsi Otomatisasi (Helpers)
+* **Auto-Numbering (Loan Code):** * **Logika:** Menggabungkan prefix `LOAN`, tahun berjalan, dan nomor urut dari database (Contoh: `LOAN-2026-001`).
+    * **Tujuan:** Menjamin keunikan setiap nomor transaksi peminjaman.
+* **Activity Formatter:** * **Logika:** Mendeteksi perubahan nilai pada model (`getChanges`), membuang kolom sensitif, dan mengubahnya menjadi format JSON.
+    * **Tujuan:** Menyediakan data audit trail yang mudah dibaca pada tabel *Activity Logs*.
+
+### 2. Proses Bisnis Utama (Workflows)
+* **Proses Persetujuan (Approval):**
+    1.  Admin memvalidasi ketersediaan fisik barang.
+    2.  Admin menentukan jumlah unit yang disetujui (`qty_approved`).
+    3.  Sistem mengubah status menjadi `approved` atau `partially_approved`.
+* **Proses Serah Terima (Hand-Over):**
+    1.  Sistem mencari unit fisik dengan status `available` (Mode Auto) atau Admin memilih unit secara spesifik (Mode Manual).
+    2.  Sistem mengubah status unit menjadi `borrowed` secara *silent* (tanpa memicu log berlebih).
+    3.  Mencatat kondisi awal barang (`condition_out`) saat keluar dari gudang.
+* **Proses Pengembalian & Denda (Finish Loan):**
+    1.  Petugas mengecek kesesuaian unit yang kembali dan kondisi akhirnya (`condition_in`).
+    2.  Sistem menghitung keterlambatan berdasarkan `due_at`.
+    3.  Jika ada keterlambatan atau kerusakan, sistem membuat record `fines` (Denda) secara otomatis/manual.
+    4.  Status unit dikembalikan menjadi `available`.
+* **Proses Pelunasan Denda:**
+    1.  Admin memverifikasi pembayaran dari user.
+    2.  Sistem mengubah status denda menjadi `paid` dan mencatat waktu pelunasan.
+
+### 3. Keamanan & Hak Akses (Middleware/Policy)
+* **RBAC (Role Based Access Control):** * **Logika:** Mengecek kolom `role` pada tabel `users`.
+    * **Tujuan:** Membatasi akses menu (Admin bisa CRUD semua, User hanya bisa melihat katalog dan meminjam).
+
+---
+
+## D) Pengujian dan Screenshot Hasil Uji
+
+### 1. Login

@@ -43,7 +43,7 @@ class LoansTable
                         $record->status === 'approved' => 'success',
                         $record->status === 'partially_approved' => 'info',
                         $record->status === 'borrowed' => 'primary',
-                        $record->status === 'returned' => 'success',
+                        $record->status === 'finished' => 'success',
                         $record->status === 'rejected', $record->status === 'cancelled' => 'gray',
                         default => 'gray',
                     })
@@ -51,7 +51,7 @@ class LoansTable
                         $record->status === 'borrowed' && $record->due_at?->isPast() => 'heroicon-m-exclamation-triangle',
                         $record->status === 'pending' => 'heroicon-m-clock',
                         $record->status === 'borrowed' => 'heroicon-m-hand-raised',
-                        $record->status === 'returned' => 'heroicon-m-check-circle',
+                        $record->status === 'finished' => 'heroicon-m-check-circle',
                         default => 'heroicon-m-information-circle',
                     })
                     ->formatStateUsing(fn (Loan $record): string => 
@@ -63,7 +63,7 @@ class LoansTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('returned_at')
+                TextColumn::make('finished_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -89,18 +89,18 @@ class LoansTable
                     ->openUrlInNewTab(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-
+                
                 LoanAction::approve(),
                 LoanAction::reject(),
                 LoanAction::startLoan(),
                 LoanAction::finishLoan(),
+
+                ViewAction::make(),
+                EditAction::make()
+                    ->hidden(fn ($record) => $record->status === 'finished'),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 

@@ -21,7 +21,7 @@ class Loan extends Model
         'approved_by',
         'borrowed_at',
         'due_at',
-        'returned_at',
+        'finished_at',
         'status',
         'reason',
         'admin_note',

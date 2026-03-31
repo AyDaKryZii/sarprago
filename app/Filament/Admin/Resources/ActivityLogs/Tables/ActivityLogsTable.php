@@ -20,33 +20,28 @@ class ActivityLogsTable
                     ->label('Timestamp')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
-
                 TextColumn::make('username')
                     ->label('Causer')
                     ->searchable()
                     ->description(fn ($record) => "ID: #{$record->user_id}"),
-
                 TextColumn::make('log_name')
                     ->label('Modul')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'Security' => 'danger',
                         'Inventory' => 'warning',
                         'Category' => 'info',
                         default => 'gray',
                     }),
-
                 TextColumn::make('description')
                     ->label('Action')
                     ->searchable()
-                    ->wrap(), // Agar teks panjang tidak terpotong
+                    ->wrap(), 
             ])
-            ->defaultSort('created_at', 'desc') // Log terbaru selalu di atas
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 SelectFilter::make('log_name')
                     ->label('Filter Modul')
                     ->options([
-                        'Security' => 'Security',
                         'Inventory' => 'Inventory',
                         'Category' => 'Category',
                     ]),
